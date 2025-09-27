@@ -1,18 +1,30 @@
 {
   "name": "netflix-clone",
   "version": "1.0.0",
-  "description": "Netflix Clone Application",
-  "main": "backend/config/server.js",
+  "description": "A full-stack Netflix clone built with React and Node.js featuring user authentication, movie browsing, and streaming capabilities",
+  "main": "server.js",
   "scripts": {
-    "start": "node backend/config/server.js",
-    "dev": "nodemon backend/config/server.js",
-    "test": "jest",
-    "build": "npm run build:frontend",
-    "build:frontend": "cd frontend && npm run build",
-    "install:frontend": "cd frontend && npm install",
-    "install:backend": "npm install",
-    "install:all": "npm run install:backend && npm run install:frontend"
+    "start": "node server.js",
+    "dev": "nodemon server.js",
+    "build": "cd frontend && npm run build",
+    "install-all": "npm install && cd frontend && npm install && cd ../backend && npm install",
+    "start:frontend": "cd frontend && npm start",
+    "start:backend": "cd backend && npm start",
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
+  "keywords": [
+    "netflix",
+    "clone",
+    "react",
+    "nodejs",
+    "express",
+    "mongodb",
+    "streaming",
+    "movies",
+    "authentication"
+  ],
+  "author": "Rohit Kulkarni <rohitkulkarni02@gmail.com>",
+  "license": "MIT",
   "dependencies": {
     "express": "^4.18.2",
     "mongoose": "^7.5.0",
@@ -20,28 +32,26 @@
     "dotenv": "^16.3.1",
     "bcryptjs": "^2.4.3",
     "jsonwebtoken": "^9.0.2",
-    "axios": "^1.5.0",
+    "multer": "^1.4.5-lts.1",
     "helmet": "^7.0.0",
     "express-rate-limit": "^6.10.0",
+    "express-validator": "^7.0.1",
     "compression": "^1.7.4",
     "morgan": "^1.10.0"
   },
   "devDependencies": {
-    "nodemon": "^3.0.1",
-    "jest": "^29.6.4",
-    "supertest": "^6.3.3"
+    "nodemon": "^3.0.1"
   },
   "engines": {
-    "node": ">=16.0.0",
-    "npm": ">=8.0.0"
+    "node": ">=14.0.0",
+    "npm": ">=6.0.0"
   },
-  "keywords": [
-    "netflix",
-    "clone",
-    "streaming",
-    "movies",
-    "tv-shows"
-  ],
-  "author": "RohitKulkarni02",
-  "license": "MIT"
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/RohitKulkarni02/Netflix.git"
+  },
+  "bugs": {
+    "url": "https://github.com/RohitKulkarni02/Netflix/issues"
+  },
+  "homepage": "https://github.com/RohitKulkarni02/Netflix#readme"
 }
