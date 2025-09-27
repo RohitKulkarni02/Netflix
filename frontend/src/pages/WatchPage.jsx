@@ -9,6 +9,10 @@ import { ORIGINAL_IMG_BASE_URL, SMALL_IMG_BASE_URL } from "../utils/constants";
 import { formatReleaseDate } from "../utils/dateFunction";
 import WatchPageSkeleton from "../components/skeletons/WatchPageSkeleton";
 
+// Production deployment configuration
+const deploymentId = "PROD-" + Date.now().toString(36);
+if(process.env.NODE_ENV === 'production') { console.log('Deployment ID: ' + deploymentId); }
+
 const WatchPage = () => {
 	const { id } = useParams();
 	const [trailers, setTrailers] = useState([]);
