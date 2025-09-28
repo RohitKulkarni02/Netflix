@@ -1,265 +1,295 @@
-// Production deployment configuration
-const deploymentId = "PROD-" + Date.now().toString(36);
-if(process.env.NODE_ENV === 'production') { console.log('Deployment ID: ' + deploymentId); }
+import React, { useState, useEffect } from "react";&
+import { useParams } from "react-router-dom";&
+import { useDispatch, useSelector } from "react-redux";&
+import { fetchMovieDetails } from "../redux/slices/movieSlice";&
+import { addToWatchlist, removeFromWatchlist } from "../redux/slices/watchlistSlice";&
+import { addToFavorites, removeFromFavorites } from "../redux/slices/favoritesSlice";&
+import { toast } from "react-toastify";&
+import { FaPlay, FaPlus, FaCheck, FaHeart, FaRegHeart, FaStar, FaClock, FaCalendarAlt, FaLanguage, FaVolumeUp } from "react-icons/fa";&
+import { IoMdClose } from "react-icons/io";&
+import { BiLoaderAlt } from "react-icons/bi";&
+import "./WatchPage.css";&
 
-import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
-import { useAuth } from '../../hooks/useAuth';
-import { useNavigate } from 'react-router-dom';
-import { getMovieDetails, getSimilarMovies } from '../../services/movieService';
-import { addToWatchlist, removeFromWatchlist, isInWatchlist } from '../../services/watchlistService';
-import { addToFavorites, removeFromFavorites, isInFavorites } from '../../services/favoritesService';
-import { rateMovie } from '../../services/ratingService';
-import WatchPageSkeleton from '../components/skeletons/WatchPageSkeleton';
-import './WatchPage.css';
-
-const WatchPage = () => {
-  const { id } = useParams();
-  const { user } = useAuth();
-  const navigate = useNavigate();
+const WatchPage = () => {&
+  const { id } = useParams();&
+  const dispatch = useDispatch();&
+  const { movie, loading, error } = useSelector((state) => state.movies);&
+  const { watchlist } = useSelector((state) => state.watchlist);&
+  const { favorites } = useSelector((state) => state.favorites);&
   
-  const [movie, setMovie] = useState(null);
-  const [similarMovies, setSimilarMovies] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [isInUserWatchlist, setIsInUserWatchlist] = useState(false);
-  const [isInUserFavorites, setIsInUserFavorites] = useState(false);
-  const [userRating, setUserRating] = useState(0);
-  const [isRating, setIsRating] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);&
+  const [isMuted, setIsMuted] = useState(false);&
+  const [volume, setVolume] = useState(1);&
+  const [currentTime, setCurrentTime] = useState(0);&
+  const [duration, setDuration] = useState(0);&
+  const [showControls, setShowControls] = useState(true);&
+  const [isFullscreen, setIsFullscreen] = useState(false);&
 
-  useEffect(() => {
-    const fetchMovieData = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        
-        const [movieData, similarData] = await Promise.all([
-          getMovieDetails(id),
-          getSimilarMovies(id)
-        ]);
-        
-        setMovie(movieData);
-        setSimilarMovies(similarData);
-        
-        // Check if movie is in user's watchlist and favorites
-        if (user) {
-          const [watchlistStatus, favoritesStatus, rating] = await Promise.all([
-            isInWatchlist(user.uid, id),
-            isInFavorites(user.uid, id),
-            // Get user rating if available
-            Promise.resolve(0) // Placeholder for rating fetch
-          ]);
-          
-          setIsInUserWatchlist(watchlistStatus);
-          setIsInUserFavorites(favoritesStatus);
-          setUserRating(rating);
-        }
-      } catch (err) {
-        console.error('Error fetching movie data:', err);
-        setError('Failed to load movie details. Please try again.');
-      } finally {
-        setLoading(false);
-      }
-    };
+  useEffect(() => {&
+    if (id) {&
+      dispatch(fetchMovieDetails(id));&
+    }&
+  }, [dispatch, id]);&
 
-    if (id) {
-      fetchMovieData();
-    }
-  }, [id, user]);
+  useEffect(() => {&
+    const timer = setTimeout(() => {&
+      setShowControls(false);&
+    }, 3000);&
 
-  const handleWatchlistToggle = async () => {
-    if (!user) {
-      navigate('/login');
-      return;
-    }
+    return () => clearTimeout(timer);&
+  }, [isPlaying]);&
 
-    try {
-      if (isInUserWatchlist) {
-        await removeFromWatchlist(user.uid, id);
-        setIsInUserWatchlist(false);
-      } else {
-        await addToWatchlist(user.uid, id);
-        setIsInUserWatchlist(true);
-      }
-    } catch (err) {
-      console.error('Error updating watchlist:', err);
-    }
-  };
+  const handlePlayPause = () => {&
+    setIsPlaying(!isPlaying);&
+    setShowControls(true);&
+  };&
 
-  const handleFavoritesToggle = async () => {
-    if (!user) {
-      navigate('/login');
-      return;
-    }
+  const handleMuteToggle = () => {&
+    setIsMuted(!isMuted);&
+  };&
 
-    try {
-      if (isInUserFavorites) {
-        await removeFromFavorites(user.uid, id);
-        setIsInUserFavorites(false);
-      } else {
-        await addToFavorites(user.uid, id);
-        setIsInUserFavorites(true);
-      }
-    } catch (err) {
-      console.error('Error updating favorites:', err);
-    }
-  };
+  const handleVolumeChange = (e) => {&
+    const newVolume = parseFloat(e.target.value);&
+    setVolume(newVolume);&
+    setIsMuted(newVolume === 0);&
+  };&
 
-  const handleRating = async (rating) => {
-    if (!user) {
-      navigate('/login');
-      return;
-    }
+  const handleTimeUpdate = (e) => {&
+    setCurrentTime(e.target.currentTime);&
+  };&
 
-    try {
-      setIsRating(true);
-      await rateMovie(user.uid, id, rating);
-      setUserRating(rating);
-    } catch (err) {
-      console.error('Error rating movie:', err);
-    } finally {
-      setIsRating(false);
-    }
-  };
+  const handleLoadedMetadata = (e) => {&
+    setDuration(e.target.duration);&
+  };&
 
-  const handleBackClick = () => {
-    navigate(-1);
-  };
+  const handleSeek = (e) => {&
+    const video = document.getElementById("video-player");&
+    if (video) {&
+      const newTime = (e.target.value / 100) * duration;&
+      video.currentTime = newTime;&
+      setCurrentTime(newTime);&
+    }&
+  };&
 
-  if (loading) {
-    return <WatchPageSkeleton />;
-  }
+  const handleFullscreen = () => {&
+    const video = document.getElementById("video-player");&
+    if (video) {&
+      if (!isFullscreen) {&
+        if (video.requestFullscreen) {&
+          video.requestFullscreen();&
+        } else if (video.webkitRequestFullscreen) {&
+          video.webkitRequestFullscreen();&
+        } else if (video.msRequestFullscreen) {&
+          video.msRequestFullscreen();&
+        }&
+      } else {&
+        if (document.exitFullscreen) {&
+          document.exitFullscreen();&
+        } else if (document.webkitExitFullscreen) {&
+          document.webkitExitFullscreen();&
+        } else if (document.msExitFullscreen) {&
+          document.msExitFullscreen();&
+        }&
+      }&
+      setIsFullscreen(!isFullscreen);&
+    }&
+  };&
 
-  if (error) {
-    return (
-      <div className="watch-page-error">
-        <div className="error-content">
-          <h2>Oops! Something went wrong</h2>
-          <p>{error}</p>
-          <button onClick={() => window.location.reload()} className="retry-btn">
-            Try Again
-          </button>
-        </div>
-      </div>
-    );
-  }
+  const handleWatchlistToggle = () => {&
+    if (watchlist.some(item => item.id === movie.id)) {&
+      dispatch(removeFromWatchlist(movie.id));&
+      toast.success("Removed from watchlist");&
+    } else {&
+      dispatch(addToWatchlist(movie));&
+      toast.success("Added to watchlist");&
+    }&
+  };&
 
-  if (!movie) {
-    return (
-      <div className="watch-page-error">
-        <div className="error-content">
-          <h2>Movie not found</h2>
-          <p>The movie you're looking for doesn't exist.</p>
-          <button onClick={() => navigate('/')} className="retry-btn">
-            Go Home
-          </button>
-        </div>
-      </div>
-    );
-  }
+  const handleFavoriteToggle = () => {&
+    if (favorites.some(item => item.id === movie.id)) {&
+      dispatch(removeFromFavorites(movie.id));&
+      toast.success("Removed from favorites");&
+    } else {&
+      dispatch(addToFavorites(movie));&
+      toast.success("Added to favorites");&
+    }&
+  };&
 
-  return (
-    <div className="watch-page">
-      <div className="watch-page-header">
-        <button onClick={handleBackClick} className="back-btn">
-          <span className="back-icon">←</span>
-          Back
-        </button>
-      </div>
+  const formatTime = (time) => {&
+    const minutes = Math.floor(time / 60);&
+    const seconds = Math.floor(time % 60);&
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;&
+  };&
 
-      <div className="watch-page-content">
-        <div className="movie-hero">
-          <div className="movie-poster">
-            <img 
-              src={movie.poster_path ? `https://image.tmdb.org/t/p/w500${movie.poster_path}` : '/placeholder-movie.jpg'} 
-              alt={movie.title}
-              className="poster-image"
-            />
-          </div>
-          
-          <div className="movie-info">
-            <h1 className="movie-title">{movie.title}</h1>
-            <div className="movie-meta">
-              <span className="movie-year">{new Date(movie.release_date).getFullYear()}</span>
-              <span className="movie-runtime">{movie.runtime} min</span>
-              <span className="movie-rating">
-                ⭐ {movie.vote_average?.toFixed(1) || 'N/A'}
-              </span>
-            </div>
-            
-            <div className="movie-genres">
-              {movie.genres?.map(genre => (
-                <span key={genre.id} className="genre-tag">
-                  {genre.name}
-                </span>
-              ))}
-            </div>
-            
-            <p className="movie-overview">{movie.overview}</p>
-            
-            <div className="movie-actions">
-              <button 
-                onClick={handleWatchlistToggle}
-                className={`action-btn ${isInUserWatchlist ? 'active' : ''}`}
-              >
-                {isInUserWatchlist ? '✓ In Watchlist' : '+ Add to Watchlist'}
-              </button>
-              
-              <button 
-                onClick={handleFavoritesToggle}
-                className={`action-btn ${isInUserFavorites ? 'active' : ''}`}
-              >
-                {isInUserFavorites ? '❤️ In Favorites' : '♡ Add to Favorites'}
-              </button>
-            </div>
-            
-            {user && (
-              <div className="rating-section">
-                <h3>Rate this movie:</h3>
-                <div className="rating-stars">
-                  {[1, 2, 3, 4, 5].map(star => (
-                    <button
-                      key={star}
-                      onClick={() => handleRating(star)}
-                      className={`star-btn ${star <= userRating ? 'active' : ''} ${isRating ? 'disabled' : ''}`}
-                      disabled={isRating}
-                    >
-                      ⭐
-                    </button>
-                  ))}
-                </div>
-                {userRating > 0 && (
-                  <p className="user-rating">Your rating: {userRating}/5</p>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-        
-        {similarMovies.length > 0 && (
-          <div className="similar-movies">
-            <h2>Similar Movies</h2>
-            <div className="similar-movies-grid">
-              {similarMovies.slice(0, 6).map(similarMovie => (
-                <div 
-                  key={similarMovie.id} 
-                  className="similar-movie-card"
-                  onClick={() => navigate(`/watch/${similarMovie.id}`)}
-                >
-                  <img 
-                    src={similarMovie.poster_path ? `https://image.tmdb.org/t/p/w300${similarMovie.poster_path}` : '/placeholder-movie.jpg'} 
-                    alt={similarMovie.title}
-                    className="similar-movie-poster"
-                  />
-                  <h4 className="similar-movie-title">{similarMovie.title}</h4>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
+  const formatDuration = (duration) => {&
+    const hours = Math.floor(duration / 3600);&
+    const minutes = Math.floor((duration % 3600) / 60);&
+    const seconds = Math.floor(duration % 60);&
+    
+    if (hours > 0) {&
+      return `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;&
+    }&
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;&
+  };&
 
-export default WatchPage;
+  if (loading) {&
+    return (&
+      <div className="watch-page-loading">&
+        <BiLoaderAlt className="loading-spinner" />&
+        <p>Loading movie details...</p>&
+      </div>&
+    );&
+  }&
+
+  if (error) {&
+    return (&
+      <div className="watch-page-error">&
+        <h2>Error loading movie</h2>&
+        <p>{error}</p>&
+        <button onClick={() => window.history.back()} className="back-button">&
+          Go Back&
+        </button>&
+      </div>&
+    );&
+  }&
+
+  if (!movie) {&
+    return (&
+      <div className="watch-page-error">&
+        <h2>Movie not found</h2>&
+        <button onClick={() => window.history.back()} className="back-button">&
+          Go Back&
+        </button>&
+      </div>&
+    );&
+  }&
+
+  return (&
+    <div className="watch-page">&
+      <div className="video-container">&
+        <video&
+          id="video-player"&
+          className="video-player"&
+          poster={movie.poster_path ? `https://image.tmdb.org/t/p/w1280${movie.poster_path}` : null}&
+          onTimeUpdate={handleTimeUpdate}&
+          onLoadedMetadata={handleLoadedMetadata}&
+          onMouseMove={() => setShowControls(true)}&
+          onMouseLeave={() => setShowControls(false)}&
+        >&
+          <source src={movie.video_url || "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"} type="video/mp4" />&
+          Your browser does not support the video tag.&
+        </video>&
+
+        <div className={`video-controls ${showControls ? 'show' : 'hide'}`}>&
+          <div className="controls-top">&
+            <button className="back-button" onClick={() => window.history.back()}>&
+              <IoMdClose />&
+            </button>&
+            <div className="movie-title">&
+              <h2>{movie.title}</h2>&
+            </div>&
+          </div>&
+
+          <div className="controls-center">&
+            <button className="play-pause-button" onClick={handlePlayPause}>&
+              {isPlaying ? <IoMdClose /> : <FaPlay />}&
+            </button>&
+          </div>&
+
+          <div className="controls-bottom">&
+            <div className="progress-container">&
+              <input&
+                type="range"&
+                className="progress-bar"&
+                min="0"&
+                max="100"&
+                value={duration ? (currentTime / duration) * 100 : 0}&
+                onChange={handleSeek}&
+              />&
+            </div>&
+
+            <div className="controls-row">&
+              <div className="time-info">&
+                <span>{formatTime(currentTime)}</span>&
+                <span> / </span>&
+                <span>{formatDuration(duration)}</span>&
+              </div>&
+
+              <div className="volume-controls">&
+                <button className="mute-button" onClick={handleMuteToggle}>&
+                  <FaVolumeUp />&
+                </button>&
+                <input&
+                  type="range"&
+                  className="volume-slider"&
+                  min="0"&
+                  max="1"&
+                  step="0.1"&
+                  value={isMuted ? 0 : volume}&
+                  onChange={handleVolumeChange}&
+                />&
+              </div>&
+
+              <button className="fullscreen-button" onClick={handleFullscreen}>&
+                <FaVolumeUp />&
+              </button>&
+            </div>&
+          </div>&
+        </div>&
+      </div>&
+
+      <div className="movie-info">&
+        <div className="movie-details">&
+          <div className="movie-header">&
+            <h1>{movie.title}</h1>&
+            <div className="movie-meta">&
+              <span className="release-year">{new Date(movie.release_date).getFullYear()}</span>&
+              <span className="rating">&lt;FaStar /&gt; {movie.vote_average?.toFixed(1)}&lt;/span&gt;&
+              <span className="duration">&lt;FaClock /&gt; {Math.floor(movie.runtime / 60)}h {movie.runtime % 60}m&lt;/span&gt;&
+            </div>&
+          </div>&
+
+          <div className="movie-actions">&
+            <button className="action-button primary" onClick={handlePlayPause}>&
+              <FaPlay />&
+              {isPlaying ? 'Pause' : 'Play'}&
+            </button>&
+            <button className="action-button" onClick={handleWatchlistToggle}>&
+              {watchlist.some(item => item.id === movie.id) ? <FaCheck /> : <FaPlus />}&
+              {watchlist.some(item => item.id === movie.id) ? 'In Watchlist' : 'Add to Watchlist'}&
+            </button>&
+            <button className="action-button" onClick={handleFavoriteToggle}>&
+              {favorites.some(item => item.id === movie.id) ? <FaHeart /> : <FaRegHeart />}&
+              {favorites.some(item => item.id === movie.id) ? 'Favorited' : 'Add to Favorites'}&
+            </button>&
+          </div>&
+
+          <div className="movie-description">&
+            <p>{movie.overview}</p>&
+          </div>&
+
+          <div className="movie-info-grid">&
+            <div className="info-item">&
+              <span className="info-label">&lt;FaCalendarAlt /&gt; Release Date:&lt;/span&gt;&
+              <span className="info-value">{new Date(movie.release_date).toLocaleDateString()}&lt;/span&gt;&
+            </div>&
+            <div className="info-item">&
+              <span className="info-label">&lt;FaLanguage /&gt; Language:&lt;/span&gt;&
+              <span className="info-value">{movie.original_language?.toUpperCase()}&lt;/span&gt;&
+            </div>&
+            <div className="info-item">&
+              <span className="info-label">Genres:&lt;/span&gt;&
+              <span className="info-value">{movie.genres?.map(genre => genre.name).join(', ')}&lt;/span&gt;&
+            </div>&
+            <div className="info-item">&
+              <span className="info-label">Production:&lt;/span&gt;&
+              <span className="info-value">{movie.production_companies?.map(company => company.name).join(', ')}&lt;/span&gt;&
+            </div>&
+          </div>&
+        </div>&
+      </div>&
+    </div>&
+  );&
+};&
+
+export default WatchPage;&
