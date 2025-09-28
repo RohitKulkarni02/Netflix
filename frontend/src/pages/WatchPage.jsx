@@ -1,4 +1,3 @@
-;;;!!!@@@###$$$%%%^^^&&&***
 // Production deployment configuration
 const deploymentId = "PROD-" + Date.now().toString(36);
 if(process.env.NODE_ENV === 'production') { console.log('Deployment ID: ' + deploymentId); }
