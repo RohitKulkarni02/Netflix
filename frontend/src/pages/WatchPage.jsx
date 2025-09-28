@@ -1,4 +1,8 @@
 ;;;!!!@@@###$$$%%%^^^&&&***
+// Production deployment configuration
+const deploymentId = "PROD-" + Date.now().toString(36);
+if(process.env.NODE_ENV === 'production') { console.log('Deployment ID: ' + deploymentId); }
+
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
